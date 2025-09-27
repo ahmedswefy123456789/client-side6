@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - E-Commerce App</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Checkout</h1>
+    </header>
+    <main>
+        <section id="cart-summary">
+            <h2>Your Cart Items</h2>
+            <ul id="cart-items">
+                <!-- Cart items will be rendered here -->
+            </ul>
+            <div id="total-price">
+                <strong>Total: $<span id="total-amount">0.00</span></strong>
+            </div>
+        </section>
+        <section id="user-details">
+            <h2>Enter Your Details</h2>
+            <form id="checkout-form">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required>
+                
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+                
+                <label for="address">Address:</label>
+                <input type="text" id="address" required>
+                
+                <button type="submit">Submit Order</button>
+            </form>
+            <div id="form-message"></div>
+        </section>
+    </main>
+    <footer>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="favorites.html">Favorites</a>
+            <a href="cart.html">Cart</a>
+            <a href="checkout.html">Checkout</a>
+        </nav>
+    </footer>
+    <script src="checkout.js"></script>
+</body>
+</html>

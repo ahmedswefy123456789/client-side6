@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vanilla Store — Demo</title>
+  <style>
+    :root{--accent:#0ea5a4;--muted:#6b7280;--bg:#f8fafc;--card:#ffffff}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;color:#0f172a;background:var(--bg);line-height:1.35}
+
+    /* header */
+    header{background:linear-gradient(90deg,#ffffff88,#f8fafc);padding:12px 16px;display:flex;gap:12px;align-items:center;position:sticky;top:0;backdrop-filter:blur(6px);z-index:10;border-bottom:1px solid #e6edf0}
+    .brand{display:flex;gap:10px;align-items:center}
+    .logo{width:36px;height:36px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:700}
+    nav{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .btn{background:transparent;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    .btn.icon{display:inline-flex;gap:8px;align-items:center}
+    .searchwrap{display:flex;gap:8px;align-items:center;padding:6px;background:#fff;border-radius:999px;border:1px solid #e6edf0}
+    input[type="search"]{border:0;outline:0;padding:6px 8px;min-width:160px}
+
+    /* layout */
+    .container{max-width:1100px;margin:18px auto;padding:0 16px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px}
+    .categories{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:#fff;padding:8px 12px;border-radius:999px;border:1px solid #e6edf0;cursor:pointer}
+    .chip.active{background:var(--accent);color:#fff;border-color:transparent}
+
+    /* grid */
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media(min-width:780px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:1100px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+    .card{background:var(--card);padding:12px;border-radius:12px;border:1px solid #e6edf0;display:flex;flex-direction:column;gap:8px}
+    .card img{width:100%;height:160px;object-fit:contain}
+    .card .meta{display:flex;justify-content:space-between;align-items:center}
+    .title{font-size:14px;font-weight:600;margin:0}
+    .price{font-weight:700}
+    .actions{display:flex;gap:8px;align-items:center}
+    .fav{background:transparent;border:0;padding:6px;border-radius:8px;cursor:pointer}
+    .add{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+
+    /* pages */
+    .page{display:none}
+    .page.active{display:block}
+
+    /* cart table */
+    table{width:100%;border-collapse:collapse;background:transparent}
+    th,td{padding:10px;border-bottom:1px solid #eef3f4;text-align:left}
+    .qty{width:90px}
+    .cart-summary{background:#fff;padding:12px;border-radius:12px;border:1px solid #e6edf0}
+
+    /* checkout form */
+    form{display:grid;gap:10px}
+    input,textarea,select{padding:10px;border-radius:8px;border:1px solid #e6edf0}
+    .success{background:#d1fae5;color:#065f46;padding:10px;border-radius:8px}
+
+    footer{padding:18px;text-align:center;color:var(--muted);font-size:14px;margin-top:24px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">e-commerce</div>
+      <div>
+        <div style="font-weight:800">Vanilla Store</div>
+      </div>
+    </div>
+
+    <div class="searchwrap" style="margin-left:12px">
+      <input id="searchInput" type="search" placeholder="Search products..." aria-label="Search products" />
+      <button id="clearSearch" class="btn">✕</button>
+    </div>
+
+    <nav>
+      <button class="btn" data-route="#home">Products</button>
+      <button class="btn" data-route="#favorites">Favorites <span id="favCount" style="margin-left:6px;color:var(--muted)"></span></button>
+      <button class="btn" data-route="#cart">Cart (<span id="cartCount">0</span>)</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Products page -->
+    <section id="home" class="page active">
+      <div class="toolbar">
+        <div class="categories" id="categories"></div>
+        <div style="margin-left:auto;color:var(--muted);font-size:14px">Showing <span id="shownCount">0</span> products</div>
+      </div>
+
+      <div id="productGrid" class="grid"></div>
+    </section>
+
+    <!-- Favorites page -->
+    <section id="favorites" class="page">
+      <h2>Favorites</h2>
+      <div id="favoritesGrid" class="grid"></div>
+      <div id="noFavs" style="color:var(--muted);margin-top:12px"></div>
+    </section>
+
+    <!-- Cart page -->
+    <section id="cart" class="page">
+      <h2>Your Cart</h2>
+      <div style="display:flex;gap:12px;flex-direction:column">
+        <div id="cartTableWrap"></div>
+        <div class="cart-summary" id="cartSummary"></div>
+      </div>
+    </section>
+
+    <!-- Checkout page -->
+    <section id="checkout" class="page">
+      <h2>Checkout</h2>
+      <div style="display:grid;grid-template-columns:1fr;gap:12px">
+        <div class="cart-summary" id="checkoutSummary"></div>
+        <form id="checkoutForm">
+          <input id="name" placeholder="Full name" required />
+          <input id="email" type="email" placeholder="Email" required />
+          <textarea id="address" placeholder="Address" rows="3" required></textarea>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button type="submit" class="add">Place Order</button>
+            <div id="formErr" style="color:#b91c1c"></div>
+          </div>
+        </form>
+        <div id="orderResult"></div>
+      </div>
+    </section>
+
+    <footer>Built with vanilla JS • Responsive • LocalStorage</footer>
+  </main>
+
+  <script>
+    // Config & state
+    const API_BASE = 'https://fakestoreapi.com';
+    let products = [];
+    let filtered = [];
+    let categories = [];
+
+    // LocalStorage helpers
+    const ls = {
+      get(key, fallback) { try{return JSON.parse(localStorage.getItem(key)) ?? fallback}catch(e){return fallback} },
+      set(key, value){ localStorage.setItem(key, JSON.stringify(value)) }
+    }
+
+    function getFavorites(){ return ls.get('favorites', []) }
+    function toggleFavorite(id){
+      const favs = getFavorites();
+      const i = favs.indexOf(id);
+      if(i>-1) favs.splice(i,1); else favs.push(id);
+      ls.set('favorites', favs);
+      updateFavCount();
+    }
+
+    function getCart(){ return ls.get('cart', {}) }
+    function setCart(cart){ ls.set('cart', cart); updateCartCount(); }
+    function addToCart(product, qty=1){
+      const cart = getCart();
+      if(cart[product.id]) cart[product.id].qty += qty; else cart[product.id] = {id:product.id, title:product.title, price:product.price, image:product.image, qty};
+      setCart(cart);
+    }
+
+    function removeFromCart(id){ const cart=getCart(); delete cart[id]; setCart(cart); }
+    function updateQty(id, qty){ const cart=getCart(); if(!cart[id]) return; cart[id].qty = Number(qty); if(cart[id].qty<=0) delete cart[id]; setCart(cart); }
+
+    // UI helpers
+    const productGrid = document.getElementById('productGrid');
+    const favoritesGrid = document.getElementById('favoritesGrid');
+    const categoriesWrap = document.getElementById('categories');
+    const searchInput = document.getElementById('searchInput');
+    const shownCount = document.getElementById('shownCount');
+
+    function el(tag, attrs={}, ...children){ const e = document.createElement(tag); for(const k in attrs) if(k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]); else if(k==='html') e.innerHTML = attrs[k]; else e.setAttribute(k, attrs[k]); for(const c of children) if(c instanceof Node) e.appendChild(c); else e.appendChild(document.createTextNode(c)); return e }
+
+    function renderProducts(list){
+      productGrid.innerHTML='';
+      shownCount.textContent = list.length;
+      list.forEach(p=>{
+        const card = el('article',{class:'card'});
+        const img = el('img',{src:p.image,alt:p.title});
+        const title = el('p',{class:'title'}, p.title);
+        const meta = el('div',{class:'meta'}, el('div',{}, el('div',{style:'font-size:12px;color:var(--muted)'}, p.category) ), el('div',{class:'price'}, `$${p.price.toFixed(2)}`));
+        const actions = el('div',{class:'actions'});
+        const favBtn = el('button',{class:'fav', onclick:()=>{ toggleFavorite(String(p.id)); renderProducts(filteredByAll()); renderFavorites(); }}, heartSVG(getFavorites().includes(String(p.id))));
+        const addBtn = el('button',{class:'add', onclick:()=>{ addToCart(p); toast(`${p.title} added to cart`); renderCart(); }}, 'Add');
+        actions.append(favBtn, addBtn);
+        card.append(img, title, meta, actions);
+        productGrid.appendChild(card);
+      })
+    }
+
+    function renderCategories(){
+      categoriesWrap.innerHTML='';
+      const allChip = el('button',{class:'chip active', onclick:()=>{ setActiveCategory('all') }}, 'All');
+      categoriesWrap.appendChild(allChip);
+      categories.forEach(c=>{
+        const chip = el('button',{class:'chip', onclick:()=>{ setActiveCategory(c) }}, c);
+        categoriesWrap.appendChild(chip);
+      })
+    }
+
+    function setActiveCategory(cat){
+      Array.from(categoriesWrap.children).forEach(ch=>ch.classList.remove('active'));
+      const btn = Array.from(categoriesWrap.children).find(ch=>ch.textContent=== (cat==='all'?'All':cat));
+      if(btn) btn.classList.add('active');
+      applyFilters();
+    }
+
+    function filteredByAll(){
+      const q = searchInput.value.trim().toLowerCase();
+      const activeChip = Array.from(categoriesWrap.children).find(ch=>ch.classList.contains('active'))?.textContent || 'All';
+      const cat = activeChip==='All' ? null : activeChip;
+      return products.filter(p=>{
+        if(cat && p.category!==cat) return false;
+        if(q && !p.title.toLowerCase().includes(q)) return false;
+        return true;
+      })
+    }
+
+    function applyFilters(){ filtered = filteredByAll(); renderProducts(filtered); }
+
+    // Favorites page
+    function renderFavorites(){
+      const favs = getFavorites();
+      favoritesGrid.innerHTML='';
+      if(!favs.length){ document.getElementById('noFavs').textContent = 'You have no favorites yet.'; return } else document.getElementById('noFavs').textContent='';
+      const favProducts = products.filter(p=>favs.includes(String(p.id)));
+      favProducts.forEach(p=>{
+        const card = el('article',{class:'card'});
+        card.append(el('img',{src:p.image,alt:p.title}), el('p',{class:'title'}, p.title), el('div',{class:'meta'}, el('div',{}, p.category), el('div',{}, `$${p.price.toFixed(2)}`)), el('div',{class:'actions'}, el('button',{class:'fav', onclick:()=>{ toggleFavorite(String(p.id)); renderFavorites(); renderProducts(filteredByAll()); }}, heartSVG(true)), el('button',{class:'add', onclick:()=>{ addToCart(p); toast('Added to cart'); renderCart(); }}, 'Add')));
+        favoritesGrid.appendChild(card);
+      })
+      updateFavCount();
+    }
+
+    function updateFavCount(){ const c = getFavorites().length; document.getElementById('favCount').textContent = c?`(${c})` :'' }
+
+    // Cart page
+    function renderCart(){
+      const wrap = document.getElementById('cartTableWrap');
+      const summary = document.getElementById('cartSummary');
+      const cart = getCart();
+      const ids = Object.keys(cart);
+      if(!ids.length){ wrap.innerHTML='<div style="color:var(--muted)">Your cart is empty.</div>'; summary.innerHTML=''; updateCartCount(); return }
+      const table = document.createElement('table');
+      const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Product</th><th>Price</th><th class="qty">Qty</th><th>Subtotal</th><th></th></tr>';
+      const tbody = document.createElement('tbody');
+      let total = 0;
+      ids.forEach(id=>{
+        const item = cart[id];
+        const tr = document.createElement('tr');
+        const subtotal = item.price * item.qty; total += subtotal;
+        tr.innerHTML = `<td style="display:flex;gap:8px;align-items:center"><img src="${item.image}" style="width:50px;height:50px;object-fit:contain;border-radius:6px"/> <div style="max-width:240px">${escapeHtml(item.title)}</div></td>`;
+        const priceTd = document.createElement('td'); priceTd.textContent = `$${item.price.toFixed(2)}`;
+        const qtyTd = document.createElement('td'); qtyTd.innerHTML = `<input type="number" min="0" value="${item.qty}" data-id="${id}" style="width:70px;padding:6px;border-radius:6px;border:1px solid #e6edf0" />`;
+        const subTd = document.createElement('td'); subTd.textContent = `$${subtotal.toFixed(2)}`;
+        const remTd = document.createElement('td'); remTd.innerHTML = `<button class="btn" data-remove="${id}">Remove</button>`;
+        tr.appendChild(priceTd); tr.appendChild(qtyTd); tr.appendChild(subTd); tr.appendChild(remTd);
+        tbody.appendChild(tr);
+      })
+      table.appendChild(thead); table.appendChild(tbody);
+      wrap.innerHTML=''; wrap.appendChild(table);
+
+      summary.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>Total</strong><strong>$${total.toFixed(2)}</strong></div><div style="margin-top:8px;display:flex;gap:8px"><button class="add" id="toCheckout">Checkout</button><button class="btn" id="clearCart">Clear cart</button></div>`;
+
+      // attach listeners
+      wrap.querySelectorAll('input[type="number"]').forEach(inp=>{
+        inp.addEventListener('change', (e)=>{ const id = e.target.dataset.id; const val = Number(e.target.value); if(Number.isNaN(val)) return; updateQty(id, val); renderCart(); })
+      })
+      wrap.querySelectorAll('[data-remove]').forEach(b=> b.addEventListener('click', e=>{ removeFromCart(e.target.dataset.remove); renderCart(); }))
+
+      document.getElementById('toCheckout').addEventListener('click', ()=>{ navigateTo('#checkout'); renderCheckout(); })
+      document.getElementById('clearCart').addEventListener('click', ()=>{ if(confirm('Clear cart?')){ setCart({}); renderCart(); } })
+
+      updateCartCount();
+    }
+
+    function updateCartCount(){ const cart=getCart(); const count = Object.values(cart).reduce((s,i)=>s+i.qty,0); document.getElementById('cartCount').textContent = count; }
+
+    // Checkout
+    function renderCheckout(){
+      const summary = document.getElementById('checkoutSummary');
+      const cart = getCart(); const ids = Object.keys(cart);
+      if(!ids.length){ summary.innerHTML = '<div style="color:var(--muted)">Your cart is empty. Add items before checkout.</div>'; return }
+      let total=0; const list = ids.map(id=>{ const it=cart[id]; total += it.qty * it.price; return `<div style="display:flex;justify-content:space-between">${escapeHtml(it.title)} <span>$${(it.qty*it.price).toFixed(2)}</span></div>` }).join('');
+      summary.innerHTML = `<div><strong>Order summary</strong></div><div style="margin-top:8px">${list}</div><div style="margin-top:8px;display:flex;justify-content:space-between"><strong>Total</strong><strong>$${total.toFixed(2)}</strong></div>`;
+    }
+
+    // Routing
+    function navigateTo(hash){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); const id = hash.replace('#','') || 'home'; const page = document.getElementById(id); if(page) page.classList.add('active'); window.location.hash = '#'+id }
+    document.querySelectorAll('[data-route]').forEach(b=> b.addEventListener('click', e=> navigateTo(e.currentTarget.getAttribute('data-route'))));
+    window.addEventListener('hashchange', ()=>{ const h = location.hash || '#home'; navigateTo(h); })
+
+    // Utilities
+    function heartSVG(active){ return active ? '❤️' : '🤍' }
+    function toast(msg){ console.log('TOAST',msg) }
+    function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+
+    // Fetch data
+    async function load(){
+      try{
+        const [pRes, cRes] = await Promise.all([fetch(API_BASE + '/products'), fetch(API_BASE + '/products/categories')]);
+        if(!pRes.ok) throw new Error('Products fetch failed');
+        products = await pRes.json();
+        categories = await cRes.json();
+        renderCategories();
+        filtered = products.slice();
+        renderProducts(filtered);
+        renderFavorites();
+        renderCart();
+        updateFavCount();
+        // attach search
+        searchInput.addEventListener('input', debounce(()=> applyFilters(), 250));
+        document.getElementById('clearSearch').addEventListener('click', ()=>{ searchInput.value=''; applyFilters(); })
+
+        // checkout form
+        document.getElementById('checkoutForm').addEventListener('submit', (e)=>{
+          e.preventDefault(); const name = document.getElementById('name').value.trim(); const email = document.getElementById('email').value.trim(); const address = document.getElementById('address').value.trim();
+          if(!name||!email||!address){ document.getElementById('formErr').textContent='Please fill all fields'; return }
+          // simulate submission
+          const order = {name,email,address,cart:getCart(), date:new Date().toISOString()};
+          console.log('ORDER SUBMITTED',order);
+          document.getElementById('orderResult').innerHTML = '<div class="success">Order placed successfully! Thank you.'+"\n"+'Your cart has been cleared.</div>';
+          setCart({}); renderCart(); renderCheckout();
+        })
+
+      }catch(err){ console.error(err); productGrid.innerHTML = '<div style="color:#b91c1c">Failed to load products. Try again later.</div>' }
+    }
+
+    // small debounce
+    function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms) } }
+
+    // init
+    load();
+
+    // small helper: adjust initial route
+    if(!location.hash) navigateTo('#home'); else navigateTo(location.hash);
+  </script>
+</body>
+</html>
